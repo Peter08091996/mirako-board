@@ -52,25 +52,24 @@ npm run dev
 # 打开 http://localhost:3000
 ```
 
-### 4. 构建（GitHub Pages / 静态托管）
+### 4. 构建（本地预览）
 
 ```bash
 npm run build
 ```
 
-构建产物输出到 `dist/` 目录。
+## 部署到 Vercel（推荐）
 
-## 部署到 GitHub Pages
-
-1. 确保代码已 push 到 GitHub 仓库
-2. 仓库 Settings → Pages → Source 选择 `GitHub Actions`
-3. 使用 Next.js 官方提供的 Pages Workflow，或直接上传 `dist/` 内容
-
-更简单的替代方案：直接部署到 **Vercel**：
+由于仓库已设为 private，最方便的方式是用 Vercel CLI 直接部署本地代码：
 
 ```bash
-npx vercel --prod
+npx vercel login    # 第一次需要登录你的 Vercel 账号
+npx vercel --prod   # 部署到生产环境
 ```
+
+或者，你也可以在 [vercel.com](https://vercel.com) 新建项目，导入 GitHub 仓库（需要授权 Vercel 访问你的 private repo），每次 push 自动部署。
+
+> Vercel 原生支持 Next.js，不需要静态导出，所有路由和客户端渲染都能完美运行。
 
 ## 使用说明
 
