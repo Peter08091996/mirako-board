@@ -1,3 +1,6 @@
 node_modules/
 .vercel/
 data.json
+dist/
+.env.local
+.next/
