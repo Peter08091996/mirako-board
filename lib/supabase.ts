@@ -8,6 +8,7 @@ export const supabase = supabaseMissing
   ? (null as any)
   : createClient(url, key)
 
+// force re-deploy to bust corrupted Vercel chunk cache
 export type Task = {
   id: string
   content: string
