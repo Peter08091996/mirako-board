@@ -35,13 +35,16 @@ export default function HomeClient() {
 
   useEffect(() => {
     setMounted(true)
-    supabase.auth.getSession().then((res: { data: { session: any } }) => {
-      const session = res.data.session
-      if (session?.user) {
-        setUser({ id: session.user.id, email: session.user.email })
+
+    const init = async () => {
+      const res = await supabase.auth.getSession()
+      const s = res.data.session
+      if (s?.user) {
+        setUser({ id: s.user.id, email: s.user.email })
       }
       setLoading(false)
-    })
+    }
+    init()
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
