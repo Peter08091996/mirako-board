@@ -35,7 +35,7 @@ export default function HomeClient() {
 
   useEffect(() => {
     setMounted(true)
-    supabase.auth.getSession().then((res) => {
+    supabase.auth.getSession().then((res: { data: { session: any } }) => {
       const session = res.data.session
       if (session?.user) {
         setUser({ id: session.user.id, email: session.user.email })
