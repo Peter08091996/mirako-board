@@ -60,16 +60,36 @@ npm run build
 
 ## 部署到 Vercel（推荐）
 
-由于仓库已设为 private，最方便的方式是用 Vercel CLI 直接部署本地代码：
+### 1. 设置环境变量（⚠️ 必须先做）
+
+`.env.local` 不会被提交到 GitHub，所以 Vercel 构建时不知道 Supabase 地址。
+
+在 Vercel Dashboard → 你的项目 → **Settings → Environment Variables** 里添加：
+
+| Name | Value |
+|------|-------|
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://zfmlgakijlrtyibophbl.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` |
+
+**注意**：变量名必须以 `NEXT_PUBLIC_` 开头，否则前端代码读取不到。
+
+### 2. 部署方式
+
+**方式 A：Vercel CLI（最快）**
 
 ```bash
-npx vercel login    # 第一次需要登录你的 Vercel 账号
+npx vercel login    # 第一次需要登录
 npx vercel --prod   # 部署到生产环境
 ```
 
-或者，你也可以在 [vercel.com](https://vercel.com) 新建项目，导入 GitHub 仓库（需要授权 Vercel 访问你的 private repo），每次 push 自动部署。
+**方式 B：连接 GitHub（自动 CI/CD）**
 
-> Vercel 原生支持 Next.js，不需要静态导出，所有路由和客户端渲染都能完美运行。
+1. 打开 [vercel.com/new](https://vercel.com/new)
+2. 导入 `Peter08091996/mirako-board`
+3. 授权 Vercel 访问你的 private repo
+4. 框架选 **Next.js**
+5. 在 Environment Variables 页面填入上面两个变量，然后点 Deploy
+6. 之后每次 push 到 `main`，Vercel 会自动重新部署
 
 ## 使用说明
 

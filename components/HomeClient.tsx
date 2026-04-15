@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { supabase, Task, Member } from '@/lib/supabase'
+import { supabase, supabaseMissing, Task, Member } from '@/lib/supabase'
 
 const DEFAULT_MEMBERS: Member[] = [
   { id: 'peter',    name: 'Peter',    abbr: 'P' },
@@ -222,6 +222,23 @@ export default function HomeClient() {
 
   if (!mounted || loading) {
     return <div style={{ padding: 40, textAlign: 'center', fontSize: '1.2rem' }}>loading...</div>
+  }
+
+  if (supabaseMissing) {
+    return (
+      <div className="login-wrap sketch-box">
+        <h1>mirako</h1>
+        <div className="login-error" style={{ fontSize: '1.1rem', lineHeight: 1.6 }}>
+          ⚠️ Supabase 环境变量未配置<br />
+          请在 Vercel Dashboard → Project Settings → Environment Variables 中添加以下两项：
+          <ul style={{ marginTop: 12, paddingLeft: 20 }}>
+            <li><code>NEXT_PUBLIC_SUPABASE_URL</code></li>
+            <li><code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code></li>
+          </ul>
+          添加后重新部署即可。
+        </div>
+      </div>
+    )
   }
 
   if (!user) {
