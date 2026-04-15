@@ -57,13 +57,11 @@ alter publication supabase_realtime add table public.tasks;
 -- ============================================
 -- 4. 【可选】关闭邮箱验证
 -- 这样同事注册后不用去邮箱点确认链接，直接就能登录
--- 如果这行 SQL 执行报错，请去 Dashboard 手动关闭：
--- Authentication → Providers → Email → Confirm email (取消勾选)
+-- 
+-- ⚠️ 这个设置无法通过 SQL 修改，请手动操作：
+-- Supabase Dashboard → Authentication → Providers → Email 
+-- 找到 "Confirm email" 取消勾选，然后 Save
 -- ============================================
-
-update auth.config
-set enable_confirmations = false
-where id = (select id from auth.config limit 1);
 
 -- ============================================
 -- 5. 自动创建 profile 的触发器
