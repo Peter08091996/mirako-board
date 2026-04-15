@@ -79,6 +79,33 @@ html, body {
   opacity: 0.9;
   transform: rotate(0deg);
 }
+.login-btn {
+  flex: 1;
+  padding: 12px;
+  font-family: inherit;
+  font-size: 1.2rem;
+  border: 2px solid #1a1a1a;
+  background: #1a1a1a;
+  color: #fff;
+  cursor: pointer;
+  transform: rotate(-0.5deg);
+}
+.login-btn.outline {
+  background: #fff;
+  color: #1a1a1a;
+}
+.password-wrap {
+  position: relative;
+}
+.eye-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  font-size: 1.1rem;
+  user-select: none;
+}
 .login-tip {
   margin-top: 18px;
   font-size: 0.95rem;

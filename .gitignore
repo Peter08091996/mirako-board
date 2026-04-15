@@ -4,3 +4,4 @@ data.json
 dist/
 .env.local
 .next/
+.vercel

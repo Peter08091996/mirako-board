@@ -257,7 +257,7 @@ export default function HomeClient() {
           placeholder="you@example.com"
         />
         <label>密码</label>
-        <div style={{ position: 'relative' }}>
+        <div className="password-wrap">
           <input
             type={showPassword ? 'text' : 'password'}
             value={password}
@@ -266,29 +266,16 @@ export default function HomeClient() {
             onKeyDown={e => { if (e.key === 'Enter') handleLogin() }}
           />
           <span
+            className="eye-toggle"
             onClick={() => setShowPassword(v => !v)}
-            style={{
-              position: 'absolute',
-              right: 10,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              cursor: 'pointer',
-              fontSize: '1.1rem',
-              userSelect: 'none',
-            }}
             title={showPassword ? '隐藏密码' : '显示密码'}
           >
             {showPassword ? '🙈' : '👁'}
           </span>
         </div>
         <div style={{ display: 'flex', gap: 12, marginTop: 22 }}>
-          <button onClick={handleLogin} style={{ flex: 1 }}>登录</button>
-          <button
-            onClick={handleSignUp}
-            style={{ flex: 1, background: '#fff', color: '#1a1a1a' }}
-          >
-            注册
-          </button>
+          <button className="login-btn" onClick={handleLogin}>登录</button>
+          <button className="login-btn outline" onClick={handleSignUp}>注册</button>
         </div>
         <div className="login-tip">
           小团队自用看板。如果是第一次使用，输入邮箱密码点击注册即可。

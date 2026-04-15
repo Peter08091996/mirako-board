@@ -1,3 +1,5 @@
+import './globals.css'
+
 export const metadata = {
   title: 'mirako - 任务看板',
 }
