@@ -23,6 +23,7 @@ export default function HomeClient() {
   // 登录表单
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [authError, setAuthError] = useState('')
   const [authTip, setAuthTip] = useState('')
 
@@ -235,13 +236,30 @@ export default function HomeClient() {
           placeholder="you@example.com"
         />
         <label>密码</label>
-        <input
-          type="password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          placeholder="******"
-          onKeyDown={e => { if (e.key === 'Enter') handleLogin() }}
-        />
+        <div style={{ position: 'relative' }}>
+          <input
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            placeholder="******"
+            onKeyDown={e => { if (e.key === 'Enter') handleLogin() }}
+          />
+          <span
+            onClick={() => setShowPassword(v => !v)}
+            style={{
+              position: 'absolute',
+              right: 10,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              cursor: 'pointer',
+              fontSize: '1.1rem',
+              userSelect: 'none',
+            }}
+            title={showPassword ? '隐藏密码' : '显示密码'}
+          >
+            {showPassword ? '🙈' : '👁'}
+          </span>
+        </div>
         <div style={{ display: 'flex', gap: 12, marginTop: 22 }}>
           <button onClick={handleLogin} style={{ flex: 1 }}>登录</button>
           <button
