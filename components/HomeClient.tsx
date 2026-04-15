@@ -46,7 +46,7 @@ export default function HomeClient() {
     }
     init()
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
       if (session?.user) {
         setUser({ id: session.user.id, email: session.user.email })
       } else {
