@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase, supabaseMissing, Task, Member } from '@/lib/supabase'
+import CreateTaskModal from '@/components/CreateTaskModal'
 
 const DEFAULT_MEMBERS: Member[] = [
   { id: 'peter',    name: 'Peter',    abbr: 'P' },
@@ -30,11 +31,31 @@ export default function HomeClient() {
   // 看板数据
   const [members, setMembers] = useState<Member[]>(DEFAULT_MEMBERS)
   const [tasks, setTasks] = useState<Task[]>([])
-  const [filterMemberId, setFilterMemberId] = useState<string | null>(null)
+  const [filterMemberIds, setFilterMemberIds] = useState<string[]>([])
   const channelRef = useRef<any>(null)
+
+  // 创建任务弹窗
+  const [createOpen, setCreateOpen] = useState(false)
+  const [createStatus, setCreateStatus] = useState<Task['status']>('todo')
+  const [deleteTarget, setDeleteTarget] = useState<Task | null>(null)
+  const defaultAssigneeIds = filterMemberIds
+  const completedMemberIds = useMemo(() => {
+    const ids = new Set<string>()
+    tasks.forEach(task => {
+      if (task.status !== 'done') return
+      ;(task.assignee_ids || []).forEach(id => ids.add(id))
+    })
+    return ids
+  }, [tasks])
+  const createDefaultAssigneeIds = defaultAssigneeIds.filter(id => !completedMemberIds.has(id))
 
   useEffect(() => {
     setMounted(true)
+
+    if (supabaseMissing) {
+      setLoading(false)
+      return
+    }
 
     const init = async () => {
       const res = await supabase.auth.getSession()
@@ -61,6 +82,7 @@ export default function HomeClient() {
 
   // 用户登录后加载数据
   useEffect(() => {
+    if (supabaseMissing) return
     if (!user) {
       if (channelRef.current) {
         channelRef.current.unsubscribe()
@@ -128,6 +150,7 @@ export default function HomeClient() {
   }, [user])
 
   const handleLogin = async () => {
+    if (supabaseMissing) return
     setAuthError('')
     setAuthTip('')
     const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -137,6 +160,7 @@ export default function HomeClient() {
   }
 
   const handleSignUp = async () => {
+    if (supabaseMissing) return
     setAuthError('')
     setAuthTip('')
     const { error } = await supabase.auth.signUp({ email, password })
@@ -148,22 +172,28 @@ export default function HomeClient() {
   }
 
   const handleLogout = async () => {
+    if (supabaseMissing) return
     await supabase.auth.signOut()
     setUser(null)
     setTasks([])
   }
 
   // 看板操作
-  const startAdd = async (status: Task['status']) => {
+  const startAdd = (status: Task['status']) => {
     if (!user) return
-    const val = window.prompt('要做什么事？')
-    if (!val || !val.trim()) return
+    setCreateStatus(status)
+    setCreateOpen(true)
+  }
+
+  const createTask = async (payload: { content: string; assigneeIds: string[]; status: Task['status'] }) => {
+    if (!user || supabaseMissing) return
+    const assignee_ids = payload.assigneeIds.filter(id => !completedMemberIds.has(id))
     const { data, error } = await supabase
       .from('tasks')
       .insert({
-        content: val.trim(),
-        status,
-        assignee_ids: [],
+        content: payload.content,
+        status: payload.status,
+        assignee_ids,
         created_by: user.id,
       })
       .select()
@@ -174,28 +204,51 @@ export default function HomeClient() {
   }
 
   const updateTaskContent = async (task: Task, newContent: string) => {
+    if (supabaseMissing) return
     if (!newContent.trim() || newContent.trim() === task.content) return
     await supabase.from('tasks').update({ content: newContent.trim() }).eq('id', task.id)
     setTasks(prev => prev.map(t => (t.id === task.id ? { ...t, content: newContent.trim() } : t)))
   }
 
   const toggleAssignee = async (task: Task, memberId: string) => {
+    if (supabaseMissing) return
     const ids = Array.isArray(task.assignee_ids) ? [...task.assignee_ids] : []
     const idx = ids.indexOf(memberId)
     if (idx > -1) ids.splice(idx, 1)
-    else ids.push(memberId)
+    else {
+      if (completedMemberIds.has(memberId)) return
+      ids.push(memberId)
+    }
     const { error } = await supabase.from('tasks').update({ assignee_ids: ids }).eq('id', task.id)
     if (!error) {
       setTasks(prev => prev.map(t => (t.id === task.id ? { ...t, assignee_ids: ids } : t)))
     }
   }
 
-  const deleteTask = async (id: string) => {
+  const deleteTask = async () => {
+    if (supabaseMissing) return
+    if (!deleteTarget) return
+    const id = deleteTarget.id
     await supabase.from('tasks').delete().eq('id', id)
     setTasks(prev => prev.filter(t => t.id !== id))
+    setDeleteTarget(null)
+  }
+
+  const advanceTask = async (task: Task) => {
+    if (supabaseMissing) return
+    const nextStatus =
+      task.status === 'todo' ? 'doing' :
+      task.status === 'doing' ? 'done' :
+      null
+    if (!nextStatus) return
+    const { error } = await supabase.from('tasks').update({ status: nextStatus }).eq('id', task.id)
+    if (!error) {
+      setTasks(prev => prev.map(t => (t.id === task.id ? { ...t, status: nextStatus } : t)))
+    }
   }
 
   const dropTask = async (e: React.DragEvent, status: Task['status']) => {
+    if (supabaseMissing) return
     e.preventDefault()
     const id = e.dataTransfer.getData('text/plain')
     const task = tasks.find(t => t.id === id)
@@ -216,13 +269,13 @@ export default function HomeClient() {
 
   const filteredTasks = useMemo(() => {
     return tasks.filter(t => {
-      if (filterMemberId) {
+      if (filterMemberIds.length) {
         const ids = t.assignee_ids || []
-        return ids.includes(filterMemberId)
+        return filterMemberIds.some(mid => ids.includes(mid))
       }
       return true
     })
-  }, [tasks, filterMemberId])
+  }, [tasks, filterMemberIds])
 
   if (!mounted || loading) {
     return <div style={{ padding: 40, textAlign: 'center', fontSize: '1.2rem' }}>loading...</div>
@@ -290,6 +343,20 @@ export default function HomeClient() {
 
   return (
     <div className="container">
+      <CreateTaskModal
+        open={createOpen}
+        status={createStatus}
+        members={members}
+        unavailableMemberIds={completedMemberIds}
+        defaultAssigneeIds={createDefaultAssigneeIds}
+        onClose={() => setCreateOpen(false)}
+        onCreate={createTask}
+      />
+      <DeleteConfirmModal
+        task={deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={deleteTask}
+      />
       <header>
         <h1>mirako</h1>
         <div className="header-right">
@@ -297,20 +364,31 @@ export default function HomeClient() {
             {members.map(m => {
               const isMe = m.id === user.id
               const hasNotif = isMe && hasNewAssignment(m.id)
+              const active = filterMemberIds.includes(m.id)
               return (
                 <div
                   key={m.id}
-                  className={`member-avatar sketch-box ${filterMemberId === m.id ? 'active' : ''}`}
-                  title={m.name + (isMe ? ' (我)' : '')}
-                  onClick={() => setFilterMemberId(prev => prev === m.id ? null : m.id)}
+                  className={`member-avatar sketch-box ${active ? 'active' : ''}`}
+                  title={
+                    (active ? '（筛选中）' : '') +
+                    m.name +
+                    (isMe ? ' (我)' : '') +
+                    '（点击切换筛选）'
+                  }
+                  onClick={() =>
+                    setFilterMemberIds(prev => {
+                      if (prev.includes(m.id)) return prev.filter(x => x !== m.id)
+                      return [...prev, m.id]
+                    })
+                  }
                 >
-                  {m.abbr}
+                  {m.name}
                   {hasNotif && <span className="notif-badge">!</span>}
                 </div>
               )
             })}
-            {filterMemberId && (
-              <span className="clear-filter" onClick={() => setFilterMemberId(null)}>
+            {filterMemberIds.length > 0 && (
+              <span className="clear-filter" onClick={() => setFilterMemberIds([])}>
                 清除筛选
               </span>
             )}
@@ -343,9 +421,11 @@ export default function HomeClient() {
                       key={task.id}
                       task={task}
                       members={members}
+                      unavailableMemberIds={completedMemberIds}
+                      onAdvance={advanceTask}
                       onUpdateContent={updateTaskContent}
                       onToggleAssignee={toggleAssignee}
-                      onDelete={deleteTask}
+                      onDelete={setDeleteTarget}
                     />
                   ))
                 )}
@@ -362,15 +442,19 @@ export default function HomeClient() {
 function TaskCard({
   task,
   members,
+  unavailableMemberIds,
+  onAdvance,
   onUpdateContent,
   onToggleAssignee,
   onDelete,
 }: {
   task: Task
   members: Member[]
+  unavailableMemberIds: Set<string>
+  onAdvance: (task: Task) => void
   onUpdateContent: (task: Task, val: string) => void
   onToggleAssignee: (task: Task, memberId: string) => void
-  onDelete: (id: string) => void
+  onDelete: (task: Task) => void
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(task.content)
@@ -405,41 +489,109 @@ function TaskCard({
         e.currentTarget.classList.remove('dragging')
       }}
     >
-      <div
-        ref={ref}
-        className="task-text"
-        contentEditable={editing}
-        suppressContentEditableWarning
-        onClick={() => { if (!editing) setEditing(true) }}
-        onInput={e => setDraft(e.currentTarget.textContent || '')}
-        onBlur={commit}
-        onKeyDown={e => {
-          if (e.key === 'Enter') { e.preventDefault(); commit() }
-          if (e.key === 'Escape') { setDraft(task.content); setEditing(false) }
-        }}
-        style={editing ? { borderBottom: '1px dashed #555', background: 'rgba(0,0,0,0.02)' } : undefined}
-      >
-        {task.content}
+      <div className="task-title-row">
+        <div
+          ref={ref}
+          className="task-text"
+          contentEditable={editing}
+          suppressContentEditableWarning
+          onClick={() => { if (!editing) setEditing(true) }}
+          onInput={e => setDraft(e.currentTarget.textContent || '')}
+          onBlur={commit}
+          onKeyDown={e => {
+            if (e.key === 'Enter') { e.preventDefault(); commit() }
+            if (e.key === 'Escape') { setDraft(task.content); setEditing(false) }
+          }}
+          style={editing ? { borderBottom: '1px dashed #555', background: 'rgba(0,0,0,0.02)' } : undefined}
+        >
+          {task.content}
+        </div>
+        {task.status !== 'done' ? (
+          <button
+            type="button"
+            className="task-advance"
+            title={task.status === 'todo' ? '移到进行中' : '移到已完成'}
+            onClick={e => {
+              e.stopPropagation()
+              onAdvance(task)
+            }}
+          >
+            {task.status === 'todo' ? '到进行中' : '到已完成'}
+          </button>
+        ) : null}
       </div>
       <div className="task-meta">
         <div className="task-assignees">
           {members.map(m => {
             const ids = task.assignee_ids || []
+            const assigned = ids.includes(m.id)
+            const disabled = unavailableMemberIds.has(m.id) && !assigned
             return (
               <span
                 key={m.id}
-                className={`mini-avatar ${ids.includes(m.id) ? 'assigned' : ''}`}
-                title={'指派给 ' + m.name}
-                onClick={e => { e.stopPropagation(); onToggleAssignee(task, m.id) }}
+                className={`mini-avatar ${assigned ? 'assigned' : ''} ${disabled ? 'disabled' : ''}`}
+                title={
+                  disabled
+                    ? `${m.name} 已建好，不能再指派`
+                    : assigned
+                      ? `${m.name}（点击取消指派）`
+                      : `指派给 ${m.name}`
+                }
+                onClick={e => {
+                  e.stopPropagation()
+                  if (disabled) return
+                  onToggleAssignee(task, m.id)
+                }}
               >
-                {m.abbr}
+                {m.name}
               </span>
             )
           })}
         </div>
-        <span className="task-delete" onClick={e => { e.stopPropagation(); onDelete(task.id) }}>
+        <span className="task-delete" onClick={e => { e.stopPropagation(); onDelete(task) }}>
           ×
         </span>
+      </div>
+    </div>
+  )
+}
+
+function DeleteConfirmModal({
+  task,
+  onClose,
+  onConfirm,
+}: {
+  task: Task | null
+  onClose: () => void
+  onConfirm: () => void
+}) {
+  useEffect(() => {
+    if (!task) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [task, onClose])
+
+  if (!task) return null
+
+  return (
+    <div className="modal-overlay" onMouseDown={onClose} role="presentation">
+      <div className="modal sketch-box delete-modal" onMouseDown={e => e.stopPropagation()} role="dialog" aria-modal="true">
+        <div className="modal-title">确认删除</div>
+        <div className="delete-modal-text">
+          确定要删除这个任务吗？
+        </div>
+        <div className="delete-modal-task">“{task.content}”</div>
+        <div className="modal-actions">
+          <button className="modal-btn outline" onClick={onClose}>
+            取消
+          </button>
+          <button className="modal-btn danger" onClick={onConfirm}>
+            删除
+          </button>
+        </div>
       </div>
     </div>
   )
